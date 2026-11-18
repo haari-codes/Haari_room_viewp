@@ -1,0 +1,324 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Haari's Dream Room</title>
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;background:#211e25;color:white;
+ font-family:Arial,sans-serif;overflow:hidden
+}
+#info{
+ position:absolute;top:10px;left:10px;z-index:5;
+ background:#29252dcc;padding:12px;border-radius:12px;
+ font-size:13px;line-height:1.6
+}
+#info b{color:#f4cba5}
+#controls{
+ position:absolute;bottom:15px;left:10px;right:10px;
+ z-index:5;display:flex;gap:8px;flex-wrap:wrap
+}
+button{
+ background:#e8c5a6;color:#29212a;border:0;
+ border-radius:9px;padding:10px 13px;font-weight:bold
+}
+canvas{display:block}
+</style>
+</head>
+<body>
+
+<div id="info">
+ <b>HAARI'S DREAM ROOM</b><br>
+ Room size: 10 × 10 ft<br>
+ <span id="view">3D Room View</span><br>
+ Drag: Rotate | Pinch: Zoom
+</div>
+
+<div id="controls">
+ <button onclick="toggleRoof()">Ceiling</button>
+ <button onclick="resetView()">Reset View</button>
+ <button onclick="showLabels()">Labels</button>
+</div>
+
+<script type="module">
+import * as THREE from
+'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+import {OrbitControls} from
+'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x25232b);
+
+const camera=new THREE.PerspectiveCamera(
+ 45,innerWidth/innerHeight,0.1,1000
+);
+camera.position.set(13,12,15);
+
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+
+const controls=new OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true;
+controls.target.set(0,2,0);
+controls.maxPolarAngle=Math.PI/2.05;
+controls.minDistance=6;
+controls.maxDistance=28;
+
+scene.add(new THREE.HemisphereLight(0xffffff,0x65566b,2));
+
+const light=new THREE.DirectionalLight(0xffffff,2);
+light.position.set(5,12,8);
+light.castShadow=true;
+scene.add(light);
+
+const mat=(color,roughness=.8)=>new THREE.MeshStandardMaterial({
+ color,roughness
+});
+
+const floorMat=mat(0xbcae9e);
+const wallMat=mat(0xe8dfd2);
+const wood=mat(0x956747);
+const darkWood=mat(0x533d32);
+const cream=mat(0xf0dfca);
+const white=mat(0xf5f0e9);
+const pink=mat(0xd5aeb0);
+const green=mat(0x788d73);
+const black=mat(0x292b30);
+
+function cube(name,x,y,z,w,h,d,material){
+ const obj=new THREE.Mesh(
+  new THREE.BoxGeometry(w,h,d),material
+ );
+ obj.position.set(x,y,z);
+ obj.castShadow=true;
+ obj.receiveShadow=true;
+ obj.name=name;
+ scene.add(obj);
+ return obj;
+}
+
+function label(text,x,y,z,color=0x29212a){
+ const canvas=document.createElement('canvas');
+ canvas.width=512;canvas.height=128;
+ const ctx=canvas.getContext('2d');
+ ctx.fillStyle='#ffffff';
+ ctx.font='bold 48px Arial';
+ ctx.textAlign='center';
+ ctx.fillText(text,256,78);
+ const tex=new THREE.CanvasTexture(canvas);
+ const sprite=new THREE.Sprite(
+  new THREE.SpriteMaterial({map:tex,transparent:true})
+ );
+ sprite.position.set(x,y,z);
+ sprite.scale.set(3,0.75,1);
+ sprite.userData.label=true;
+ scene.add(sprite);
+ return sprite;
+}
+
+// FLOOR
+cube('Floor',0,-.15,0,10,.3,10,floorMat);
+
+// WALLS
+// Wall 1: front wall, with door opening
+cube('Wall 1 left',-3.8,4.5,5,2.4,9,.2,wallMat);
+cube('Wall 1 above door',2.6,7,5,4.8,4,.2,wallMat);
+cube('Wall 1 right',4.8,4.5,5,.4,9,.2,wallMat);
+
+// Wall 2: left
+cube('Wall 2',-5,4.5,0,.2,9,10,wallMat);
+
+// Wall 3: back
+cube('Wall 3',0,4.5,-5,10,9,.2,wallMat);
+
+// Wall 4: right
+cube('Wall 4',5,4.5,0,.2,9,10,wallMat);
+
+// CEILING
+const roof=cube('Ceiling',0,9.1,0,10,.2,10,white);
+roof.material.transparent=true;
+roof.material.opacity=.3;
+roof.visible=false;
+
+// WALL NUMBERS
+label('WALL 1',0,8.4,4.7);
+label('WALL 2',-4.7,8.4,0);
+label('WALL 3',0,8.4,-4.7);
+label('WALL 4',4.7,8.4,0);
+
+// DOOR on wall 1
+const door=cube('Door',2.1,2,4.82,1.7,4,.12,wood);
+const knob=cube('Door knob',2.75,2,.7,.1,.1,.1,mat(0xd6b76a));
+knob.position.set(2.75,2,4.7);
+
+// Wardrobe with mirror and dress storage
+// Wardrobe table/base
+cube('Wardrobe base',-3.45,.8,4.35,2.4,1.6,1.1,wood);
+cube('Wardrobe tabletop',-3.45,1.65,4.35,2.5,.12,1.15,cream);
+
+// Cream storage drawer
+cube('Cream drawer',-3.45,1.15,3.78,2,.7,.08,cream);
+
+// Mirror
+cube('Mirror frame',-4.05,3.5,4.32,.95,2.6,.15,darkWood);
+cube('Mirror',-4.05,3.5,4.22,.8,2.4,.03,mat(0x9cb5bd,.2));
+
+// Dress shelves, next half
+cube('Dress cupboard',-2.8,3.5,4.35,1.1,3.5,1.1,cream);
+for(let i=0;i<4;i++){
+ cube('Dress shelf',-2.8,.9+i*.85,4.35,1.08,.08,1.08,wood);
+}
+label('WARDROBE',-3.5,5.6,4.1);
+
+// BOOKSHELF: 12 separations
+cube('Bookshelf',-.65,2.8,4.4,2.5,5.5,1.0,wood);
+for(let i=1;i<3;i++)
+ cube('Book vertical',-.65+(i-1)*.83,2.8,3.88,.07,5.4,.08,darkWood);
+for(let i=1;i<4;i++)
+ cube('Book horizontal',-.65,0.45+i*1.05,3.88,2.45,.08,.95,darkWood);
+
+// Books
+const bookColors=[0x9b6359,0x526d80,0x8e9871,0xc4a46e];
+for(let row=0;row<4;row++){
+ for(let col=0;col<3;col++){
+  cube('Book',-1.45+col*.8,.8+row*1.05,3.78,.42,.7,.18,
+  mat(bookColors[(row+col)%4]));
+ }
+}
+label('BOOKSHELF',-.65,6,4);
+
+// L SHAPED CUSTOM TABLE at Wall 2 + Wall 3 corner
+// Main long side along wall 3
+cube('L Table main',-3.1,2.3,-4.25,3.8,.18,1.3,wood);
+cube('L Table leg',-4.65,1.1,-4.25,.18,2.2,1.1,darkWood);
+cube('L Table leg',-1.55,1.1,-4.25,.18,2.2,1.1,darkWood);
+
+// Side section along wall 2
+cube('L Table side',-4.25,2.3,-2.75,1.3,.18,3.0,wood);
+cube('L Table side leg',-4.25,1.1,-1.5,1.1,2.2,.18,darkWood);
+
+// 12 shelves in long side
+for(let i=0;i<4;i++){
+ for(let j=0;j<3;j++){
+  cube('L table shelf',-4.45+j*.9,.55+i*.4,-4.2,
+  .78,.07,.95,cream);
+ }
+}
+
+// Keyboard slider on short side
+cube('Keyboard slider',-4.15,1.85,-2.6,1.05,.08,1.2,darkWood);
+cube('PC monitor',-3,3.1,-4.2,1.4,1,.12,black);
+cube('Monitor screen',-3,3.1,-4.12,1.2,.78,.02,mat(0x586d80));
+cube('PC CPU',-1.35,1.2,-4.15,.5,1,.7,black);
+cube('Desk keyboard',-3,2.48,-3.75,1.1,.08,.35,black);
+label('CUSTOM L TABLE',-3.2,4,-4.1);
+
+// CHAIR
+const chair=cube('Chair seat',-3,1.2,-2.8,1,.18,.9,mat(0x665b54));
+cube('Chair back',-3,2,-2.35,1,1.5,.15,mat(0x665b54));
+cube('Chair leg',-3.4,.55,-3.1,.1,1,.1,black);
+cube('Chair leg',-2.6,.55,-3.1,.1,1,.1,black);
+
+// DOUBLE BED at Wall 3 + Wall 4 corner
+cube('Bed base',2.15,.55,-2.0,5.5,1,5.8,darkWood);
+cube('Mattress',2.15,1.15,-2.0,5.35,.35,5.65,cream);
+cube('Bed headboard',2.15,2.1,-4.85,5.5,2,.2,wood);
+
+// Pillows
+cube('Pillow',.7,1.45,-4.1,1.5,.25,.8,white);
+cube('Pillow',2.4,1.45,-4.1,1.5,.25,.8,white);
+
+// Blanket
+cube('Bed blanket',2.15,1.4,-1.4,5.2,.15,3.5,pink);
+label('DOUBLE BED',2.2,3.2,-2);
+
+// SMALL MUSIC TABLE beside bed
+cube('Music table',-.9,1.1,-.1,1.4,.2,1.1,wood);
+cube('Keyboard',-.9,1.3,-.1,1.3,.1,.55,black);
+for(let i=0;i<12;i++){
+ cube('Piano key',-.9-.57+i*.104,1.36,.22,.09,.035,.23,
+ i%7===0?black:white);
+}
+label('MUSIC CORNER',-.9,2.2,-.1);
+
+// Future guitar/violin storage underneath
+cube('Instrument stand',-.9,.35,.25,1.1,.1,.4,darkWood);
+
+// LAPTOP + PRINTER + TABLET AREA
+cube('Device shelf',4.15,1.4,1.6,1.4,.15,2.0,wood);
+cube('Laptop',4.15,1.55,1.2,.8,.08,.6,black);
+cube('Printer',4.15,1.8,2.0,.85,.5,.65,white);
+cube('Xiaomi Pad',4.15,1.55,2.5,.65,.08,.45,mat(0x596b7d));
+label('DEVICE CORNER',4.1,2.6,1.7);
+
+// FLOOR MAT
+cube('Floor mat',0,.025,1.5,3.2,.05,2.5,pink);
+
+// PHONE SHELF near bed
+cube('Phone shelf',4.3,2.2,-.5,1,.12,.6,wood);
+cube('Phone',4.3,2.32,-.5,.35,.08,.2,black);
+
+// POLAROIDS near bed, on wall 4
+for(let i=0;i<4;i++){
+ const frame=cube('Polaroid',4.87,3.5+i*.75,-2.9+i*.5,.08,.55,.65,white);
+ cube('Photo',4.81,3.52+i*.75,-2.9+i*.5,.025,.38,.48,
+ mat([0xc9a6a0,0xa2b9a0,0x9daec1,0xc8b08c][i]));
+}
+
+// SOCKET near device corner
+cube('Socket',4.86,2.8,2.8,.05,.5,.55,white);
+cube('Socket hole 1',4.82,2.9,2.68,.04,.09,.08,black);
+cube('Socket hole 2',4.82,2.9,2.9,.04,.09,.08,black);
+label('SOCKET',4.5,3.5,2.8);
+
+// Window-like decorative detail on wall 2
+// (No window included in the supplied layout)
+
+// FLOOR LIGHT
+const lamp=new THREE.PointLight(0xffd6aa,25,12);
+lamp.position.set(0,6,0);
+scene.add(lamp);
+
+// Show / hide labels
+let labels=true;
+window.showLabels=()=>{
+ labels=!labels;
+ scene.traverse(o=>{
+  if(o.userData.label)o.visible=labels;
+ });
+};
+
+// Ceiling toggle
+window.toggleRoof=()=>{
+ roof.visible=!roof.visible;
+};
+
+// Reset view
+window.resetView=()=>{
+ camera.position.set(13,12,15);
+ controls.target.set(0,2,0);
+ controls.update();
+};
+
+function animate(){
+ requestAnimationFrame(animate);
+ controls.update();
+ renderer.render(scene,camera);
+}
+animate();
+
+window.addEventListener('resize',()=>{
+ camera.aspect=innerWidth/innerHeight;
+ camera.updateProjectionMatrix();
+ renderer.setSize(innerWidth,innerHeight);
+});
+</script>
+</body>
+</html>
